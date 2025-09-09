@@ -59,8 +59,9 @@ class DisableFromSidebar extends Plugin {
   width:18px; height:18px; margin-right:6px;
   border-radius:4px; user-select:none; font-size:12px; line-height:1;
   color: var(--text-muted); border:1px solid var(--background-modifier-border); opacity:.85;
+  margin-bottom: -3px;
 }
-.dcps-hot.has-hotkeys{ color: var(--text-success); border-color: color-mix(in oklab, var(--text-success, #2ecc71) 60%, transparent); }
+.dcps-hot.has-hotkeys{ cursor: pointer; color: var(--text-success); border-color: color-mix(in oklab, var(--text-success, #2ecc71) 60%, transparent); }
 .dcps-hot:hover{ opacity:1; background: var(--background-modifier-hover); }
 `.trim();
 		const el = document.createElement('style');
@@ -108,24 +109,72 @@ class DisableFromSidebar extends Plugin {
 			const name = (labelEl.textContent || '').trim();
 			const id = idAttr || this._nameToId(name);
 			const lines = await this._getHotkeysWcas(id);
+			const hottitle = 'Click to Copy\n' + lines.join('\n');
 			console.debug(`[disable-sidebar] Found plugin item: name="${name}", id="${id}", hotkeys=${lines.length}`);
-			const hot = document.createElement('span');
-			hot.className = 'dcps-hot' + (lines && lines.length ? ' has-hotkeys' : '');
-			hot.textContent = '⌨';
-			if (lines && lines.length) hot.title = lines.join('\n');
-			insertBeforeLabelText(item, hot);
+			if (lines && lines.length) item.title = lines.join('\n');
 
-			const btn = document.createElement('span');
-			btn.className = this.BTN_CLASS;
-			btn.textContent = '×';
-			if (id) btn.setAttribute(this.BTN_ATTR, id);
-			btn.setAttribute('data-plugin-id', id);
-			btn.title = id ? `Disable "${name}"` : `Plugin ID not found for "${name}"`;
-			btn.addEventListener('click', (ev) => this._onClickDisable(ev, item, name, id));
-			insertBeforeLabelText(item, btn);
+			// close (×) button (only if not already there)
+			let btn = item.querySelector('.' + this.BTN_CLASS);
+			if (!btn) {
+				btn = document.createElement('span');
+				btn.className = this.BTN_CLASS;
+				btn.textContent = '❌'; //
+				if (id) btn.setAttribute(this.BTN_ATTR, id);
+				btn.title = id ? `Disable "${name}"` : `Plugin ID not found for "${name}"`;
+				btn.addEventListener('click', (ev) => this._onClickDisable(ev, item, name, id));
+				insertBeforeLabelText(item, btn);
+			}
+
+			// hotkey span (only if not already there)
+			let hot = item.querySelector('.dcps-hot');
+			if (!hot) {
+				hot = document.createElement('span');
+				hot.className = 'dcps-hot' + (lines && lines.length ? ' has-hotkeys' : '');
+				hot.textContent = ' ';
+				if (lines && lines.length) {
+					hot.title = hottitle;
+					hot.addEventListener('click', async (ev) => await this._onClickCopy(ev, lines, item, name, id));
+				} else {
+					hot.title = `No hotkeys found for "${name}"`;
+					hot.classList.remove('has-hotkeys');
+					hot.removeAttribute('title');
+				}
+				insertBeforeLabelText(item, hot);
+			}
 		}
 	}
-
+	async _onClickCopy(ev, lines, item, name, id) {
+		console.debug(`[disable-sidebar] Copying hotkeys for plugin: name="${name}", id="${id}", lines=${lines.length}`);
+		if (!lines || !lines.length) return;
+		if (!navigator.clipboard) {
+			new Notice('Clipboard API not available', 2000);
+			return;
+		}
+		if (!lines || !lines.length) {
+			new Notice(`No hotkeys found for "${name}"`, 2000);
+			return;
+		}
+		ev.preventDefault();
+		ev.stopPropagation();
+		if (!lines || !lines.length) {
+			new Notice(`No hotkeys found for "${name}"`, 2000);
+			return;
+		}
+		navigator.clipboard.writeText(lines.join('\n')).then(() => {
+			new Notice(`Copied hotkeys for "${name}"`, 1500);
+		}).catch(() => {
+			new Notice('Failed to copy hotkeys', 2000);
+		});
+	}
+	async _onClickDisable(ev, item, name, id) {
+		ev.preventDefault();
+		ev.stopPropagation();
+		navigator.clipboard.writeText(item.title).then(() => {
+			new Notice(`Copied plugin name: "${name}"`, 1500);
+		}).catch(() => {
+			new Notice('Failed to copy plugin name', 2000);
+		});
+	}
 	async _onClickDisable(ev, item, name, id) {
 		ev.preventDefault();
 		ev.stopPropagation();
@@ -186,20 +235,25 @@ class DisableFromSidebar extends Plugin {
 }
 
 // Insert `btn` right before the visible text node in `.vertical-tab-nav-item`
-function insertBeforeLabelText(item, btn) {
-	// 1) Prefer the first non-empty TEXT_NODE directly under the item
-	let textNode = null;
+function insertBeforeLabelText(item, el) {
+	// 1) Try first non-empty TEXT_NODE directly under the item
 	for (const n of item.childNodes) {
 		if (n.nodeType === Node.TEXT_NODE && n.textContent.trim() !== '') {
-			textNode = n;
-			break;
+			item.insertBefore(el, n);
+			return;
 		}
 	}
 
-	if (textNode) {
-		item.insertBefore(btn, textNode);            // ✅ exactly before text content
-		return;
-	}
+	// 2) If theme wraps the name, insert before that label element
+	const label = item.querySelector(':scope > .nav-label, :scope > .setting-item-name');
+	if (label) { item.insertBefore(el, label); return; }
+
+	// 3) Insert before the chevron if present
+	const chev = item.querySelector(':scope > .vertical-tab-nav-item-chevron');
+	if (chev) { item.insertBefore(el, chev); return; }
+
+	// 4) Fallback: beginning of the item
+	item.insertAdjacentElement('afterbegin', el);
 }
 // Returns lines like: "enter.cs  Do the Thing"
 async function _getPluginHotkeysWcasLines(pluginId) {
@@ -242,7 +296,7 @@ async function _getPluginHotkeysWcasLines(pluginId) {
 
 		for (const hk of combos) {
 			const str = _formatHotkeyToWcas(hk, isMac);
-			if (str) lines.push(`${str}  ${c.name || id}`);
+			if (str) lines.push(`${str}\t\t${c.name || id}`);
 		}
 	}
 	return lines;
