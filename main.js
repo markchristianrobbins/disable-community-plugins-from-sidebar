@@ -19,7 +19,8 @@ class DisableFromSidebar extends Plugin {
 	}
 
 	async onload() {
-		// Make the helper a bound method so `this.app` works inside it
+				this._installNavKeys();
+// Make the helper a bound method so `this.app` works inside it
 		this._getHotkeysWcas = (pid) => _getPluginHotkeysWcasLines.call(this, pid);
 
 		this._injectStyle();
@@ -193,6 +194,57 @@ class DisableFromSidebar extends Plugin {
 		} catch (e) {
 			console.error('[disable-sidebar] Failed to disable', id, e);
 			new Notice(`Failed to disable "${name}"`, 3000);
+		}
+	}
+
+	// --- Sidebar navigation hotkeys: Ctrl+PageUp / Ctrl+PageDown ---
+	_installNavKeys() {
+		// Only active while Settings modal is open
+		this.registerDomEvent(window, 'keydown', (e) => {
+			if (!e || !e.ctrlKey || e.altKey || e.shiftKey || e.metaKey) return;
+			const key = (e.key || '').toLowerCase();
+			if (key !== 'pageup' && key !== 'pagedown') return;
+			// Don't hijack when typing in inputs or editors
+			//if (this._isEditableTarget(e.target)) return;
+			const dir = key === 'pageup' ? -1 : 1;
+			if (this._moveSidebarSelection(dir)) {
+				e.preventDefault(); e.stopPropagation();
+			}
+		});
+	}
+
+	_isEditableTarget(t) {
+		if (!t) return false;
+		if (t.isContentEditable) return true;
+		const tag = (t.tagName || '').toUpperCase();
+		return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+	}
+
+	_moveSidebarSelection(dir) {
+		try {
+			const modal = document.querySelector('.modal.mod-settings');
+			if (!modal) return false;
+			const header = modal.querySelector('.vertical-tab-header');
+			if (!header) return false;
+
+			// Only nav items; skip group titles
+			const items = Array.from(header.querySelectorAll('.vertical-tab-nav-item'));
+			if (!items.length) return false;
+
+			let i = items.findIndex(el => el.classList.contains('is-active'));
+			if (i === -1) return false;
+
+			const n = items.length;
+			let j = i + (dir < 0 ? -1 : 1);
+			// wrap
+			j = (j % n + n) % n;
+
+			const target = items[j];
+			if (!target) return false;
+			target.click();
+			return true;
+		} catch (_) {
+			return false;
 		}
 	}
 
