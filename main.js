@@ -20,7 +20,7 @@ class DisableFromSidebar extends Plugin {
 
 	async onload() {
 		// Make the helper a bound method so `this.app` works inside it
-        this._getHotkeysWcas = (pid) => _getPluginHotkeysWcasLines.call(this, pid);
+		this._getHotkeysWcas = (pid) => _getPluginHotkeysWcasLines.call(this, pid);
 
 		this._injectStyle();
 		this._rootObs = new MutationObserver(() => this._schedule(() => this._attachIfReady()));
@@ -52,19 +52,17 @@ class DisableFromSidebar extends Plugin {
   border: 1px solid color-mix(in oklab, var(--text-error, #ff4d4d) 70%, transparent);
   font-weight: 700; line-height: 1; opacity: .85;
 }
-.${this.BTN_CLASS}::after {
-content: ' ';
-display: inline-block;
-width: 18px;
-height: 18px;
-border-radius: 4px;
-margin-left: 6px;
-}
-.${this.BTN_CLASS}[title]::after {
-background: #005500;
-}
 .${this.BTN_CLASS}:hover{ opacity:1; background: color-mix(in oklab, var(--text-error, #ff4d4d) 12%, transparent); }
-		`.trim();
+/* Hotkey indicator */
+.dcps-hot{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:18px; height:18px; margin-right:6px;
+  border-radius:4px; user-select:none; font-size:12px; line-height:1;
+  color: var(--text-muted); border:1px solid var(--background-modifier-border); opacity:.85;
+}
+.dcps-hot.has-hotkeys{ color: var(--text-success); border-color: color-mix(in oklab, var(--text-success, #2ecc71) 60%, transparent); }
+.dcps-hot:hover{ opacity:1; background: var(--background-modifier-hover); }
+`.trim();
 		const el = document.createElement('style');
 		el.textContent = css;
 		document.head.appendChild(el);
@@ -110,16 +108,12 @@ background: #005500;
 			const name = (labelEl.textContent || '').trim();
 			const id = idAttr || this._nameToId(name);
 			const lines = await this._getHotkeysWcas(id);
-			const tooltip = lines.join('\n');
-			item.removeAttribute('title');
-			if (tooltip) item.setAttribute('title', tooltip);
-
-			// .then((lines) => {
-			// 	if (lines.length) {
-			// 		const tooltip = lines.join('\n');
-			// 		item.setAttribute('title', tooltip);
-			// 	}
-			// });
+			console.debug(`[disable-sidebar] Found plugin item: name="${name}", id="${id}", hotkeys=${lines.length}`);
+			const hot = document.createElement('span');
+			hot.className = 'dcps-hot' + (lines && lines.length ? ' has-hotkeys' : '');
+			hot.textContent = '⌨';
+			if (lines && lines.length) hot.title = lines.join('\n');
+			insertBeforeLabelText(item, hot);
 
 			const btn = document.createElement('span');
 			btn.className = this.BTN_CLASS;
@@ -129,7 +123,6 @@ background: #005500;
 			btn.title = id ? `Disable "${name}"` : `Plugin ID not found for "${name}"`;
 			btn.addEventListener('click', (ev) => this._onClickDisable(ev, item, name, id));
 			insertBeforeLabelText(item, btn);
-
 		}
 	}
 
