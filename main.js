@@ -44,6 +44,7 @@ class DisableFromSidebar extends Plugin {
 
 	_injectStyle() {
 		if (this._styleEl && document.head.contains(this._styleEl)) return;
+		// do not alter
 		const css = `
 			/* Disable-from-sidebar */
 			.${this.BTN_CLASS}{
