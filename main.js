@@ -19,8 +19,9 @@ class DisableFromSidebar extends Plugin {
 	}
 
 	async onload() {
-				this._installNavKeys();
-// Make the helper a bound method so `this.app` works inside it
+		this._installFinderHotkey();
+		this._installNavKeys();
+		// Make the helper a bound method so `this.app` works inside it
 		this._getHotkeysWcas = (pid) => _getPluginHotkeysWcasLines.call(this, pid);
 
 		this._injectStyle();
@@ -74,7 +75,45 @@ class DisableFromSidebar extends Plugin {
 }
 .vertical-tab-header-group-title[data-dcps-title="options"]::before{ content:"⚙️"; }
 .vertical-tab-header-group-title[data-dcps-title="core plugins"]::before{ content:"🔌"; filter: grayscale(1) brightness(.9); }
-.vertical-tab-header-group-title[data-dcps-title="community plugins"]::before{ content:"🔌"; }`.trim();
+.vertical-tab-header-group-title[data-dcps-title="community plugins"]::before{ content:"🔌"; }
+/* Sidebar Finder Overlay */
+#dcps-finder-overlay{
+  position: fixed; inset: 0;
+  background: color-mix(in oklab, var(--background-primary) 30%, #000 70%);
+  backdrop-filter: blur(2px);
+  display:none; z-index: 9999;
+}
+#dcps-finder{
+  position: absolute; left: 50%; top: 15%;
+  transform: translateX(-50%);
+  width: min(720px, 92vw);
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 12px; box-shadow: var(--shadow-l);
+  overflow: hidden;
+}
+#dcps-finder .dcps-f-head{
+  display:flex; align-items:center; gap:8px; padding:10px 12px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+#dcps-finder .dcps-f-head input{
+  width:100%; border:none; outline:none; background:transparent;
+  font-size: 16px; padding: 6px;
+}
+#dcps-finder .dcps-f-list{
+  max-height: 60vh; overflow:auto;
+}
+#dcps-finder .dcps-f-item{
+  display:flex; align-items:center; gap:10px; padding:8px 12px;
+  cursor:pointer;
+}
+#dcps-finder .dcps-f-item .ico{ width: 1.4em; text-align:center; }
+#dcps-finder .dcps-f-item .name{ flex:1 1 auto; }
+#dcps-finder .dcps-f-item .cat{ color: var(--text-muted); font-size: 12px; }
+#dcps-finder .dcps-f-item:hover, #dcps-finder .dcps-f-item.active{
+  background: var(--background-modifier-hover);
+}
+`.trim();
 		const el = document.createElement('style');
 		el.textContent = css;
 		document.head.appendChild(el);
@@ -82,20 +121,20 @@ class DisableFromSidebar extends Plugin {
 	}
 
 	// -------- attach into Settings → Community plugins sidebar --------
-	_tagHeaderTitles(modal){
-		try{
+	_tagHeaderTitles(modal) {
+		try {
 			const root = modal || document.querySelector('.modal.mod-settings');
-			if(!root) return;
+			if (!root) return;
 			const titles = root.querySelectorAll('.vertical-tab-header-group-title');
-			for(const t of titles){
-				const txt = (t.textContent||'').trim().toLowerCase();
+			for (const t of titles) {
+				const txt = (t.textContent || '').trim().toLowerCase();
 				if (txt === 'options' || txt === 'core plugins' || txt === 'community plugins') {
 					t.setAttribute('data-dcps-title', txt);
 				} else {
 					t.removeAttribute('data-dcps-title');
 				}
 			}
-		}catch(_){}
+		} catch (_) { }
 	}
 
 	_attachIfReady() {
@@ -104,7 +143,7 @@ class DisableFromSidebar extends Plugin {
 
 
 		this._tagHeaderTitles(modal);
-// Find the "Community plugins" header in the left nav
+		// Find the "Community plugins" header in the left nav
 		const titles = modal.querySelectorAll('.vertical-tab-header-group-title');
 		let group = null;
 		for (const t of titles) {
