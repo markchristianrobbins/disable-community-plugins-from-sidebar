@@ -45,75 +45,134 @@ class DisableFromSidebar extends Plugin {
 	_injectStyle() {
 		if (this._styleEl && document.head.contains(this._styleEl)) return;
 		const css = `
-/* Disable-from-sidebar */
-.${this.BTN_CLASS}{
-  display:inline-flex; align-items:center; justify-content:center;
-  width:18px; height:18px; margin-right:6px;
-  border-radius:4px; cursor:pointer; user-select:none;
-  color: var(--text-error, #ff4d4d);
-  border: 1px solid color-mix(in oklab, var(--text-error, #ff4d4d) 70%, transparent);
-  font-weight: 700; line-height: 1; opacity: .85;
-}
-.${this.BTN_CLASS}:hover{ opacity:1; background: color-mix(in oklab, var(--text-error, #ff4d4d) 12%, transparent); }
-/* Hotkey indicator */
-.dcps-hot{
-  display:inline-flex; align-items:center; justify-content:center;
-  width:18px; height:18px; margin-right:6px;
-  border-radius:4px; user-select:none; font-size:12px; line-height:1;
-  color: var(--text-muted); border:1px solid var(--background-modifier-border); opacity:.85;
-  margin-bottom: -3px;
-}
-.dcps-hot.has-hotkeys{ cursor: pointer; color: var(--text-success); border-color: color-mix(in oklab, var(--text-success, #2ecc71) 60%, transparent); }
-.dcps-hot:hover{ opacity:1; background: var(--background-modifier-hover); }
+			/* Disable-from-sidebar */
+			.${this.BTN_CLASS}{
+				display:inline-flex;
+				align-items:center;
+				justify-content:center;
+				width:18px;
+				height:18px;
+				margin-right:6px;
+				border-radius:4px;
+				cursor:pointer;
+				user-select:none;
+				color: var(--text-error, #ff4d4d);
+				border: 1px solid color-mix(in oklab, var(--text-error, #ff4d4d) 70%, transparent);
+				font-weight: 700;
+				line-height: 1;
+				opacity: .85;
+			}
+			.${this.BTN_CLASS}:hover{
+				opacity:1;
+				background: color-mix(in oklab, var(--text-error, #ff4d4d) 12%, transparent);
+			}
+			/* Hotkey indicator */
+			.dcps-hot{
+				display:inline-flex;
+				align-items:center;
+				justify-content:center;
+				width:18px;
+				height:18px;
+				margin-right:6px;
+				border-radius:4px;
+				user-select:none;
+				font-size:12px;
+				line-height:1;
+				color: var(--text-muted); border:1px solid var(--background-modifier-border);
+				opacity:.85;
+				margin-bottom: -3px;
+			}
+			.dcps-hot.has-hotkeys{
+				cursor: pointer;
+				color: var(--text-success);
+				border-color: color-mix(in oklab, var(--text-success, #2ecc71) 60%, transparent);
+			}
+			.dcps-hot:hover{
+				opacity:1;
+				background: var(--background-modifier-hover);
+			}
 
-/* Group title badges */
-.vertical-tab-header-group-title{ position:relative; }
-.vertical-tab-header-group-title::before{
-  display:inline-block;
-  content:'';
-  margin-right:6px;
-}
-.vertical-tab-header-group-title[data-dcps-title="options"]::before{ content:"⚙️"; }
-.vertical-tab-header-group-title[data-dcps-title="core plugins"]::before{ content:"🔌"; filter: grayscale(1) brightness(.9); }
-.vertical-tab-header-group-title[data-dcps-title="community plugins"]::before{ content:"🔌"; }
-/* Sidebar Finder Overlay */
-#dcps-finder-overlay{
-  position: fixed; inset: 0;
-  background: color-mix(in oklab, var(--background-primary) 30%, #000 70%);
-  backdrop-filter: blur(2px);
-  display:none; z-index: 9999;
-}
-#dcps-finder{
-  position: absolute; left: 50%; top: 15%;
-  transform: translateX(-50%);
-  width: min(720px, 92vw);
-  background: var(--background-primary);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 12px; box-shadow: var(--shadow-l);
-  overflow: hidden;
-}
-#dcps-finder .dcps-f-head{
-  display:flex; align-items:center; gap:8px; padding:10px 12px;
-  border-bottom: 1px solid var(--background-modifier-border);
-}
-#dcps-finder .dcps-f-head input{
-  width:100%; border:none; outline:none; background:transparent;
-  font-size: 16px; padding: 6px;
-}
-#dcps-finder .dcps-f-list{
-  max-height: 60vh; overflow:auto;
-}
-#dcps-finder .dcps-f-item{
-  display:flex; align-items:center; gap:10px; padding:8px 12px;
-  cursor:pointer;
-}
-#dcps-finder .dcps-f-item .ico{ width: 1.4em; text-align:center; }
-#dcps-finder .dcps-f-item .name{ flex:1 1 auto; }
-#dcps-finder .dcps-f-item .cat{ color: var(--text-muted); font-size: 12px; }
-#dcps-finder .dcps-f-item:hover, #dcps-finder .dcps-f-item.active{
-  background: var(--background-modifier-hover);
-}
-`.trim();
+			/* Group title badges */
+			.vertical-tab-header-group-title{
+				position:relative;
+			}
+			.vertical-tab-header-group-title::before{
+				display:inline-block;
+				content:'';
+				margin-right:6px;
+			}
+			.vertical-tab-header-group-title[data-dcps-title="options"]::before{
+				content:"⚙️";
+			}
+			.vertical-tab-header-group-title[data-dcps-title="core plugins"]::before{
+				content:"🔌";
+				filter: grayscale(1) brightness(.9);
+			}
+			.vertical-tab-header-group-title[data-dcps-title="community plugins"]::before{
+				content:"🔌";
+			}
+			/* Sidebar Finder Overlay */
+			#dcps-finder-overlay{
+				position: fixed;
+				inset: 0;
+				background: color-mix(in oklab, var(--background-primary) 30%, #000 70%);
+				backdrop-filter: blur(2px);
+				display:none;
+				z-index: 9999;
+			}
+			#dcps-finder{
+				position: absolute;
+				left: 50%;
+				top: 15%;
+				transform: translateX(-50%);
+				width: min(720px, 92vw);
+				background: var(--background-primary);
+				border: 1px solid var(--background-modifier-border);
+				border-radius: 12px;
+				box-shadow: var(--shadow-l);
+				overflow: hidden;
+			}
+			#dcps-finder .dcps-f-head{
+				display:flex;
+				align-items:center;
+				gap:8px;
+				padding:10px 12px;
+				border-bottom: 1px solid var(--background-modifier-border);
+			}
+			#dcps-finder .dcps-f-head input{
+				width:100%;
+				border:none;
+				outline:none;
+				background:transparent;
+				font-size: 16px;
+				padding: 6px;
+			}
+			#dcps-finder .dcps-f-list{
+				max-height: 60vh;
+				overflow:auto;
+			}
+			#dcps-finder .dcps-f-item{
+				display:flex;
+				align-items:center;
+				gap:10px;
+				padding:8px 12px;
+				cursor:pointer;
+			}
+			#dcps-finder .dcps-f-item .ico{
+				width: 1.4em;
+				text-align:center;
+			}
+			#dcps-finder .dcps-f-item .name{
+				flex:1 1 auto;
+			}
+			#dcps-finder .dcps-f-item .cat{
+				color: var(--text-muted);
+				font-size: 12px;
+			}
+			#dcps-finder .dcps-f-item:hover, #dcps-finder .dcps-f-item.active{
+				background: var(--background-modifier-hover);
+			}
+		`.trim();
 		const el = document.createElement('style');
 		el.textContent = css;
 		document.head.appendChild(el);
