@@ -64,7 +64,17 @@ class DisableFromSidebar extends Plugin {
 }
 .dcps-hot.has-hotkeys{ cursor: pointer; color: var(--text-success); border-color: color-mix(in oklab, var(--text-success, #2ecc71) 60%, transparent); }
 .dcps-hot:hover{ opacity:1; background: var(--background-modifier-hover); }
-`.trim();
+
+/* Group title badges */
+.vertical-tab-header-group-title{ position:relative; }
+.vertical-tab-header-group-title::before{
+  display:inline-block;
+  content:'';
+  margin-right:6px;
+}
+.vertical-tab-header-group-title[data-dcps-title="options"]::before{ content:"⚙️"; }
+.vertical-tab-header-group-title[data-dcps-title="core plugins"]::before{ content:"🔌"; filter: grayscale(1) brightness(.9); }
+.vertical-tab-header-group-title[data-dcps-title="community plugins"]::before{ content:"🔌"; }`.trim();
 		const el = document.createElement('style');
 		el.textContent = css;
 		document.head.appendChild(el);
@@ -72,11 +82,29 @@ class DisableFromSidebar extends Plugin {
 	}
 
 	// -------- attach into Settings → Community plugins sidebar --------
+	_tagHeaderTitles(modal){
+		try{
+			const root = modal || document.querySelector('.modal.mod-settings');
+			if(!root) return;
+			const titles = root.querySelectorAll('.vertical-tab-header-group-title');
+			for(const t of titles){
+				const txt = (t.textContent||'').trim().toLowerCase();
+				if (txt === 'options' || txt === 'core plugins' || txt === 'community plugins') {
+					t.setAttribute('data-dcps-title', txt);
+				} else {
+					t.removeAttribute('data-dcps-title');
+				}
+			}
+		}catch(_){}
+	}
+
 	_attachIfReady() {
 		const modal = document.querySelector('.modal.mod-settings');
 		if (!modal) return;
 
-		// Find the "Community plugins" header in the left nav
+
+		this._tagHeaderTitles(modal);
+// Find the "Community plugins" header in the left nav
 		const titles = modal.querySelectorAll('.vertical-tab-header-group-title');
 		let group = null;
 		for (const t of titles) {
@@ -87,10 +115,11 @@ class DisableFromSidebar extends Plugin {
 
 		const itemsWrap = group.querySelector('.vertical-tab-header-group-items') || group;
 		this._decorateItems(itemsWrap);
+		this._tagHeaderTitles(modal);
 
 		// Watch this group only (childList sufficient; class/attrs not needed)
 		this._groupObs?.disconnect();
-		this._groupObs = new MutationObserver(() => this._schedule(() => this._decorateItems(itemsWrap)));
+		this._groupObs = new MutationObserver(() => this._schedule(() => { this._decorateItems(itemsWrap); this._tagHeaderTitles(modal); }));
 		this._groupObs.observe(itemsWrap, { childList: true, subtree: true });
 	}
 
