@@ -108,7 +108,7 @@ class DisableFromSidebar extends Plugin {
 			}
 			.vertical-tab-header-group-title[data-dcps-title="core plugins"]::before{
 				content:"🔌";
-				filter: grayscale(1) brightness(.9);
+				filter: grayscale(1) brightness(2);
 			}
 			.vertical-tab-header-group-title[data-dcps-title="community plugins"]::before{
 				content:"🔌";
@@ -194,7 +194,41 @@ class DisableFromSidebar extends Plugin {
 		});
 	}
 	// -------- attach into Settings → Community plugins sidebar --------
+	_cleanTitleText(t) {
+		try {
+			const textOnly = Array.from(t.childNodes)
+				.filter(n => n.nodeType === Node.TEXT_NODE)
+				.map(n => n.textContent || '')
+				.join(' ')
+				.trim()
+				.toLowerCase()
+				.replace(/\s+/g, ' ');
+			return textOnly;
+		} catch (_) { return ((t && t.textContent) || '').trim().toLowerCase(); }
+	}
+
 	_tagHeaderTitles(modal) {
+		try {
+			const root = modal || document.querySelector('.modal.mod-settings');
+			if (!root) return;
+			const titles = root.querySelectorAll('.vertical-tab-header-group-title');
+			for (const t of titles) {
+				// Prefer existing stable value; otherwise compute from TEXT_NODES only
+				let val = (t.getAttribute('data-dcps-title') || '').toLowerCase();
+				if (!val) {
+					let txt = this._cleanTitleText(t);
+					// Match by prefix to tolerate trailing icons/spans
+					if (txt.startsWith('options')) val = 'options';
+					else if (txt.startsWith('core plugins')) val = 'core plugins';
+					else if (txt.startsWith('community plugins')) val = 'community plugins';
+				}
+				if (val) t.setAttribute('data-dcps-title', val);
+			}
+			this._ensureOptionsInfo(modal);
+		} catch (_) { }
+	}
+
+	_tagHeaderTitles_(modal) {
 		try {
 			const root = modal || document.querySelector('.modal.mod-settings');
 			if (!root) return;
