@@ -607,19 +607,36 @@ class SidebarFinderModal extends FuzzySuggestModal {
 		return this._collectSidebarEntries(this._settingsModalEl);
 	}
 	getItemText(item) {
-		return `${item.icon} ${item.name} — ${item.group}`;
+		return `${item.name} ${item.group}`;
 	}
 	onChooseItem(item) {
 		try { item.el.click(); } catch (_) { }
 	}
-	_collectSidebarEntries(modal) {
+	renderSuggestion(value, el) {
+		const item = value?.item || value?.entry || value;
+		while (el.firstChild) el.removeChild(el.firstChild);
+		const row = document.createElement('div');
+		row.className = 'dcps-f-item';
+		row.setAttribute('data-group', (item.group || '').toLowerCase());
+		const name = document.createElement('div'); name.className = 'name'; name.textContent = item.name || '';
+		const cat = document.createElement('div');  cat.className = 'cat';  cat.textContent  = item.group || '';
+		row.appendChild(name); row.appendChild(cat);
+		el.appendChild(row);
+	}
+
+		_collectSidebarEntries(modal) {
 		const header = modal && modal.querySelector('.vertical-tab-header');
 		if (!header) return [];
 		const entries = [];
 		const groups = header.querySelectorAll('.vertical-tab-header-group');
 		for (const g of groups) {
 			const titleEl = g.querySelector(':scope > .vertical-tab-header-group-title');
-			const groupTitle = (titleEl && titleEl.textContent || '').trim();
+			const groupTitle = (() => {
+		const tn = [];
+		if (titleEl) for (const n of titleEl.childNodes) if (n.nodeType === Node.TEXT_NODE) tn.push(n.textContent || '');
+		const s = tn.join(' ').trim();
+		return s || (titleEl && titleEl.textContent || '');
+	})().trim();
 			if (!groupTitle) continue;
 			const cat = groupTitle.toLowerCase();
 			const icon = cat === 'options' ? '⚙️' : (cat === 'core plugins' ? '🔌' : (cat === 'community plugins' ? '🔌' : '•'));
