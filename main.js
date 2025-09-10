@@ -170,11 +170,48 @@ class DisableFromSidebar extends Plugin {
 			#dcps-finder .dcps-f-item .cat{
 				color: var(--text-muted);
 				font-size: 12px;
+
+				margin-left: auto;
+				text-align: right;
 			}
 			#dcps-finder .dcps-f-item:hover, #dcps-finder .dcps-f-item.active{
 				background: var(--background-modifier-hover);
 			}
-		`.trim();
+
+			#dcps-finder .dcps-f-item[data-group="options"] .name::before{
+				content: '⚙️';
+			}
+			#dcps-finder .dcps-f-item[data-group="core plugins"] .name::before{
+				content: '🔌';
+				filter: grayscale(1) brightness(2);
+			}
+
+			#dcps-finder .dcps-f-item[data-group="community plugins"] .name::before{
+				content: '🔌';
+			}
+
+			#dcps-finder .dcps-f-item {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+			}
+
+			.dcps-f-item > .cat {
+				margin-left: auto;
+			}
+
+
+			#dcps-finder .dcps-f-item .name::before{
+				display:inline-block;
+				margin-right:8px;
+			}
+
+			#dcps-finder .dcps-f-item[data-group="options"] .name::before{ content: "⚙️"; }
+
+			#dcps-finder .dcps-f-item[data-group="core plugins"] .name::before{ content: "🔌"; filter: grayscale(1) brightness(2); }
+
+			#dcps-finder .dcps-f-item[data-group="community plugins"] .name::before{ content: "🔌"; }
+`.trim();
 		const el = document.createElement('style');
 		el.textContent = css;
 		document.head.appendChild(el);
@@ -603,6 +640,20 @@ class SidebarFinderModal extends FuzzySuggestModal {
 		this._settingsModalEl = settingsModalEl;
 		this.setPlaceholder('Filter settings…');
 	}
+	onOpen() {
+		super.onOpen?.();
+		// Give the fuzzy modal a stable id for CSS targeting
+		if (this.modalEl) this.modalEl.id = 'dcps-finder';
+	}
+
+	onClose() {
+		// Clean up the id so you don’t leave stale attributes around
+		if (this.modalEl && this.modalEl.id === 'dcps-finder') {
+			this.modalEl.removeAttribute('id');
+		}
+		super.onClose?.();
+	}
+
 	getItems() {
 		return this._collectSidebarEntries(this._settingsModalEl);
 	}
@@ -619,12 +670,12 @@ class SidebarFinderModal extends FuzzySuggestModal {
 		row.className = 'dcps-f-item';
 		row.setAttribute('data-group', (item.group || '').toLowerCase());
 		const name = document.createElement('div'); name.className = 'name'; name.textContent = item.name || '';
-		const cat = document.createElement('div');  cat.className = 'cat';  cat.textContent  = item.group || '';
+		const cat = document.createElement('div'); cat.className = 'cat'; cat.textContent = item.group || '';
 		row.appendChild(name); row.appendChild(cat);
 		el.appendChild(row);
 	}
 
-		_collectSidebarEntries(modal) {
+	_collectSidebarEntries(modal) {
 		const header = modal && modal.querySelector('.vertical-tab-header');
 		if (!header) return [];
 		const entries = [];
@@ -632,18 +683,23 @@ class SidebarFinderModal extends FuzzySuggestModal {
 		for (const g of groups) {
 			const titleEl = g.querySelector(':scope > .vertical-tab-header-group-title');
 			const groupTitle = (() => {
-		const tn = [];
-		if (titleEl) for (const n of titleEl.childNodes) if (n.nodeType === Node.TEXT_NODE) tn.push(n.textContent || '');
-		const s = tn.join(' ').trim();
-		return s || (titleEl && titleEl.textContent || '');
-	})().trim();
+				const tn = [];
+				if (titleEl) for (const n of titleEl.childNodes) if (n.nodeType === Node.TEXT_NODE) tn.push(n.textContent || '');
+				const s = tn.join(' ').trim();
+				return s || (titleEl && titleEl.textContent || '');
+			})().trim();
 			if (!groupTitle) continue;
 			const cat = groupTitle.toLowerCase();
 			const icon = cat === 'options' ? '⚙️' : (cat === 'core plugins' ? '🔌' : (cat === 'community plugins' ? '🔌' : '•'));
 			const items = g.querySelectorAll(':scope .vertical-tab-header-group-items .vertical-tab-nav-item, :scope > .vertical-tab-nav-item');
 			for (const it of items) {
 				const nameEl = it.querySelector('.nav-label, .setting-item-name') || it;
-				const name = (nameEl && nameEl.textContent || '').trim();
+				const name = (() => {
+					const tn = [];
+					if (nameEl) for (const n of nameEl.childNodes) if (n.nodeType === Node.TEXT_NODE) tn.push(n.textContent || '');
+					const s = tn.join(' ').trim();
+					return s || (nameEl && nameEl.textContent || '').trim();
+				})();
 				if (!name) continue;
 				entries.push({ el: it, name, group: groupTitle, icon });
 			}
