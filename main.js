@@ -19,6 +19,7 @@ class DisableFromSidebar extends Plugin {
 	}
 
 	async onload() {
+		this._installInfoHotkey();
 		this._installFinderHotkey();
 		this._installNavKeys();
 		// Make the helper a bound method so `this.app` works inside it
@@ -186,7 +187,7 @@ class DisableFromSidebar extends Plugin {
 			if (!e) return;
 			const modal = document.querySelector('.modal.mod-settings');
 			if (!modal) return; // only inside Settings
-			if ((e.key || '') === 'F1') {
+			if ((e.key || '') === 'F1' && !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
 				e.preventDefault(); e.stopPropagation();
 				new SidebarFinderModal(this.app, modal).open();
 			}
@@ -206,6 +207,7 @@ class DisableFromSidebar extends Plugin {
 					t.removeAttribute('data-dcps-title');
 				}
 			}
+			this._ensureOptionsInfo(modal);
 		} catch (_) { }
 	}
 
@@ -230,8 +232,42 @@ class DisableFromSidebar extends Plugin {
 
 		// Watch this group only (childList sufficient; class/attrs not needed)
 		this._groupObs?.disconnect();
-		this._groupObs = new MutationObserver(() => this._schedule(() => { this._decorateItems(itemsWrap); this._tagHeaderTitles(modal); }));
+		this._groupObs = new MutationObserver(() => this._schedule(() => { this._decorateItems(itemsWrap); this._tagHeaderTitles(modal); this._ensureOptionsInfo(modal); }));
 		this._groupObs.observe(itemsWrap, { childList: true, subtree: true });
+	}
+
+
+	_ensureOptionsInfo(modal) {
+		try {
+			const root = modal || document.querySelector('.modal.mod-settings');
+			if (!root) return;
+			const title = Array.from(root.querySelectorAll('.vertical-tab-header-group-title'))
+				.find(t => ((t.getAttribute('data-dcps-title') || '').toLowerCase() === 'options'));
+			if (!title) return;
+			if (title.querySelector(':scope > .dcps-info')) return;
+			const info = document.createElement('span');
+			info.className = 'dcps-info';
+			info.textContent = 'ℹ️';
+			info.title = 'Info: Alt+F1';
+			info.style.marginLeft = '6px';
+			info.style.cursor = 'pointer';
+			info.addEventListener('click', () => new Notice('Info (Alt+F1)', 1500));
+			title.appendChild(info);
+		} catch (_) { }
+	}
+
+
+	_installInfoHotkey() {
+		this.registerDomEvent(window, 'keydown', (e) => {
+			if (!e) return;
+			if (!e.altKey) return;
+			const key = (e.key || '').toUpperCase();
+			if (key !== 'F1') return;
+			const modal = document.querySelector('.modal.mod-settings');
+			if (!modal) return;
+			e.preventDefault(); e.stopPropagation();
+			new Notice('Info (Alt+F1)', 1500);
+		});
 	}
 
 	async _decorateItems(container) {
@@ -564,6 +600,7 @@ class SidebarFinderModal extends FuzzySuggestModal {
 		return entries;
 	}
 }
+
 
 
 module.exports = DisableFromSidebar;
