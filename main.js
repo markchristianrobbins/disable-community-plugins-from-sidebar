@@ -2,7 +2,7 @@
 'use strict';
 
 /* global document */
-const { Plugin, Notice } = require('obsidian');
+const { Plugin, Notice, FuzzySuggestModal } = require('obsidian');
 
 class DisableFromSidebar extends Plugin {
 	constructor(app, manifest) {
@@ -180,6 +180,18 @@ class DisableFromSidebar extends Plugin {
 		this._styleEl = el;
 	}
 
+	_installFinderHotkey() {
+		// Use built-in FuzzySuggestModal (F1 while Settings open)
+		this.registerDomEvent(window, 'keydown', (e) => {
+			if (!e) return;
+			const modal = document.querySelector('.modal.mod-settings');
+			if (!modal) return; // only inside Settings
+			if ((e.key || '') === 'F1') {
+				e.preventDefault(); e.stopPropagation();
+				new SidebarFinderModal(this.app, modal).open();
+			}
+		});
+	}
 	// -------- attach into Settings → Community plugins sidebar --------
 	_tagHeaderTitles(modal) {
 		try {
@@ -510,6 +522,47 @@ function _formatHotkeyToWcas(hk, isMac) {
 	// Key name normalized (lowercase, friendly)
 	const k = key.toLowerCase();
 	return suffix ? `${k}.${suffix}` : k;
+}
+
+
+
+// Built-in fuzzy finder for the Settings sidebar
+class SidebarFinderModal extends FuzzySuggestModal {
+	constructor(app, settingsModalEl) {
+		super(app);
+		this._settingsModalEl = settingsModalEl;
+		this.setPlaceholder('Filter settings…');
+	}
+	getItems() {
+		return this._collectSidebarEntries(this._settingsModalEl);
+	}
+	getItemText(item) {
+		return `${item.icon} ${item.name} — ${item.group}`;
+	}
+	onChooseItem(item) {
+		try { item.el.click(); } catch (_) { }
+	}
+	_collectSidebarEntries(modal) {
+		const header = modal && modal.querySelector('.vertical-tab-header');
+		if (!header) return [];
+		const entries = [];
+		const groups = header.querySelectorAll('.vertical-tab-header-group');
+		for (const g of groups) {
+			const titleEl = g.querySelector(':scope > .vertical-tab-header-group-title');
+			const groupTitle = (titleEl && titleEl.textContent || '').trim();
+			if (!groupTitle) continue;
+			const cat = groupTitle.toLowerCase();
+			const icon = cat === 'options' ? '⚙️' : (cat === 'core plugins' ? '🔌' : (cat === 'community plugins' ? '🔌' : '•'));
+			const items = g.querySelectorAll(':scope .vertical-tab-header-group-items .vertical-tab-nav-item, :scope > .vertical-tab-nav-item');
+			for (const it of items) {
+				const nameEl = it.querySelector('.nav-label, .setting-item-name') || it;
+				const name = (nameEl && nameEl.textContent || '').trim();
+				if (!name) continue;
+				entries.push({ el: it, name, group: groupTitle, icon });
+			}
+		}
+		return entries;
+	}
 }
 
 
