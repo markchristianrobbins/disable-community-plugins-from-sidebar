@@ -1,8 +1,16 @@
 // v0.1.1 - Disable Community Plugins from Sidebar (JS)
 'use strict';
 
-/* global document */
+
+/**
+ * Imports core classes from the Obsidian API.
+ * @typedef {import('obsidian').Plugin} Plugin - Base class for all Obsidian plugins.
+ * @typedef {import('obsidian').Notice} Notice - Class for displaying notifications in Obsidian.
+ * @typedef {import('obsidian').FuzzySuggestModal} FuzzySuggestModal - Modal for fuzzy search suggestions.
+ */
 const { Plugin, Notice, FuzzySuggestModal } = require('obsidian');
+
+
 
 class DisableFromSidebar extends Plugin {
 	constructor(app, manifest) {
@@ -211,7 +219,7 @@ class DisableFromSidebar extends Plugin {
 			#dcps-finder .dcps-f-item[data-group="core plugins"] .name::before{ content: "🔌"; filter: grayscale(1) brightness(2); }
 
 			#dcps-finder .dcps-f-item[data-group="community plugins"] .name::before{ content: "🔌"; }
-`.trim();
+		`.trim();
 		const el = document.createElement('style');
 		el.textContent = css;
 		document.head.appendChild(el);
@@ -286,7 +294,7 @@ class DisableFromSidebar extends Plugin {
 		const modal = document.querySelector('.modal.mod-settings');
 		if (!modal) return;
 
-
+		rainbowize(".modal-container .vertical-tab-header .vertical-tab-nav-item", true, "color");
 		this._tagHeaderTitles(modal);
 		// Find the "Community plugins" header in the left nav
 		const titles = modal.querySelectorAll('.vertical-tab-header-group-title');
@@ -631,6 +639,71 @@ function _formatHotkeyToWcas(hk, isMac) {
 	return suffix ? `${k}.${suffix}` : k;
 }
 
+/**
+ * Rainbowize elements by first letter of text (A-Z).
+ * @param {string|NodeList|Element[]} selector  CSS selector or a collection/element
+ * @param {boolean} strip                      Remove non A-Z before processing (default: true)
+ * @param {string} property                    CSS property to set (default: 'color')
+ * @param {number|string} saturation           % or number (default: 100)
+ * @param {number|string} lightness            % or number (default: 50)
+ * @param {number} hueStart                    starting hue (0-360) (default: 0)
+ * @param {number} hueEnd                      ending hue (0-360) (default: hueStart)
+ */
+function rainbowize(
+	selector,
+	strip = true,
+	property = 'color',
+	saturation = 100,
+	lightness = 50,
+	hueStart = 0,
+	hueEnd = hueStart
+) {
+	const els =
+		typeof selector === 'string'
+			? document.querySelectorAll(selector)
+			: selector instanceof Element
+				? [selector]
+				: selector;
+
+	if (!els) return;
+
+	const pct = (v) => (typeof v === 'string' ? v : `${v}%`);
+	hueEnd = 359;//hueStart === hueEnd ? (hueEnd + 360) % 360 : hueEnd;
+	const step = (hueEnd - hueStart) / 25; // 26 letters → 25 intervals
+	const hslArr = [];
+	for (let i = 0; i < 26; i++) {
+		const hue = (hueStart + i * step) % 360;
+		hslArr.push(`hsl(${(hue + 360) % 360}, ${pct(saturation)}, ${pct(lightness)})`);
+	}
+	console.debug(`[disable-sidebar] Rainbowizing elements: count=${els.length}, property="${property}", saturation="${pct(saturation)}", lightness="${pct(lightness)}", hueStart=${hueStart}, hueEnd=${hueEnd}, step=${step}`, hslArr);
+
+
+	(els.forEach ? els : Array.from(els)).forEach((el) => {
+		let txt = (el.textContent || '').trim();
+		if (strip) txt = txt.replace(/[^A-Za-z]+/g, '');
+
+		let ch;
+		if (strip) {
+			ch = txt.charAt(0);
+		} else {
+			const m = txt.match(/[A-Za-z]/);
+			ch = m ? m[0] : '';
+		}
+		if (!ch) return;
+
+		const idx = ch.toUpperCase().charCodeAt(0) - 65; // A→0 … Z→25
+		if (idx < 0 || idx > 25) return;
+
+		const hue = (hueStart + idx * step) % 360;
+		const hsl = `hsl(${(hue + 360) % 360}, ${pct(saturation)}, ${pct(lightness)})`;
+		console.debug(`[disable-sidebar] Rainbowizing element: idx=${idx}, char="${ch}", hsl="${hsl}"`);
+		el.style.setProperty(property, hsl);
+
+		// breadcrumbs (optional)
+		el.dataset.rainbow = `${property}:${hsl}`;
+		el.dataset.rainbowIdx = String(idx);
+	});
+}
 
 
 // Built-in fuzzy finder for the Settings sidebar
