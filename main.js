@@ -1,30 +1,119 @@
 // v0.1.1 - Disable Community Plugins from Sidebar (JS)
 'use strict';
+// @ts-check
 
-
+/**
+ * Imports the main Obsidian API for plugin development.
+ * @module Obsidian
+ * @requires obsidian
+ */
+const Obsidian = require('obsidian');
 /**
  * Imports core classes from the Obsidian API.
  * @typedef {import('obsidian').Plugin} Plugin - Base class for all Obsidian plugins.
  * @typedef {import('obsidian').Notice} Notice - Class for displaying notifications in Obsidian.
  * @typedef {import('obsidian').FuzzySuggestModal} FuzzySuggestModal - Modal for fuzzy search suggestions.
  */
-const { Plugin, Notice, FuzzySuggestModal } = require('obsidian');
+const { Plugin, Notice, FuzzySuggestModal } = Obsidian;
 
-/**
+
+// #region __typedefs
+/** RGB
  * @typedef {Object} RGB
- * @property {number} r - Red channel (0–255)
- * @property {number} g - Green channel (0–255)
- * @property {number} b - Blue channel (0–255)
- * @property {number} [a=1] - Alpha (0–1)
+ * @property {number} r - Red channel (0-255)
+ * @property {number} g - Green channel (0-255)
+ * @property {number} b - Blue channel (0-255)
+ * @property {number} [a=1] - Alpha (0-1)
  */
 
-/**
+/** HSL
  * @typedef {Object} HSL
- * @property {number} h - Hue in degrees (0–360)
- * @property {number} s - Saturation in percent (0–100)
- * @property {number} l - Lightness in percent (0–100)
- * @property {number} [a=1] - Alpha (0–1)
+ * @property {number} h - Hue in degrees (0-360)
+ * @property {number} s - Saturation in percent (0-100)
+ * @property {number} l - Lightness in percent (0-100)
+ * @property {number} [a=1] - Alpha (0-1)
  */
+// #endregion __typedefs
+
+
+
+
+
+class Clipboard {
+	/**
+	 * Copy text to the system clipboard using Electron (desktop) or the modern Web Clipboard API.
+	 * This is asynchronous and resolves to true on success, false on failure.
+	 * No execCommand fallback is used.
+	 *
+	 * @param {string} text - Text to copy.
+	 * @param {boolean} [doNoticeOnFail=true] - If true, show an Obsidian Notice on failure.
+	 * @param {boolean} [doConsoleErrOnFail=true] - If true, log errors to console on failure.
+	 * @param {boolean} [silent=false] - If true, suppress the success Notice.
+	 * @returns {Promise<boolean>} Resolves true if the text was copied, false otherwise.
+	 *
+	 * @example
+	 * // In an async function
+	 * const ok = await MyClass.copy("Hello world");
+	 * if (!ok) new Notice("Could not copy");
+	 *
+	 * @example
+	 * // Using .then
+	 * MyClass.copy(JSON.stringify({ a: 1 }))
+	 *   .then(ok => {
+	 *     if (ok) new Notice("JSON copied");
+	 *   });
+	 */
+	static async copy(text, doNoticeOnFail = true, doConsoleErrOnFail = true, silent = false) {
+		const s = String(text ?? "");
+		const okNotice = () => { if (!silent) { try { new Notice("Copied", 1200); } catch (_) { } } };
+		const failNotice = (err) => {
+			if (doConsoleErrOnFail) console.error("[copy] failed:", err);
+			if (doNoticeOnFail) { try { new Notice("Copy failed", 2000); } catch (_) { } }
+		};
+
+		try {
+			const { clipboard } = require("electron");
+			if (clipboard && typeof clipboard.writeText === "function") {
+				clipboard.writeText(s);
+				okNotice();
+				return true;
+			}
+		} catch (_) {
+			// not in Electron or require unavailable
+		}
+
+		try {
+			if (typeof navigator !== "undefined" &&
+				navigator.clipboard &&
+				typeof navigator.clipboard.writeText === "function") {
+				await navigator.clipboard.writeText(s);
+				okNotice();
+				return true;
+			}
+		} catch (err) {
+			failNotice(err);
+			return false;
+		}
+
+		failNotice("no-clipboard-api");
+		return false;
+	}
+	/**
+	 * Copies the provided text to the clipboard.
+	 *
+	 * @async
+	 * @param {string} text - The text to be copied to the clipboard.
+	 * @param {boolean} [doNoticeOnFail=true] - Whether to show a notice if the copy operation fails.
+	 * @param {boolean} [doConsoleErrOnFail=true] - Whether to log an error to the console if the copy operation fails.
+	 * @param {boolean} [silent=false] - If true, suppresses any notifications or errors.
+	 * @returns {Promise<boolean>} Resolves to true if the copy operation was successful, otherwise false.
+	 */
+	async copy(text, doNoticeOnFail = true, doConsoleErrOnFail = true, silent = false) {
+		Clipboard.copy(text, doNoticeOnFail, doConsoleErrOnFail, silent);
+	}
+}
+
+const CB = new Clipboard();
 
 /**
  * Minimal color utility: parse, convert, edit, and stringify colors.
@@ -790,7 +879,7 @@ class DisableFromSidebar extends Plugin {
 			const root = modal || document.querySelector('.modal.mod-settings');
 			if (!root) return;
 			const titles = root.querySelectorAll('.vertical-tab-header-group-title');
-			for (const t of titles) {
+			for (const t of Array.from(titles)) {
 				// Prefer existing stable value; otherwise compute from TEXT_NODES only
 				let val = (t.getAttribute('data-dcps-title') || '').toLowerCase();
 				if (!val) {
@@ -830,7 +919,7 @@ class DisableFromSidebar extends Plugin {
 		rainbowize(".modal-container .vertical-tab-header .vertical-tab-nav-item", true, "color");
 		this._tagHeaderTitles(modal);
 		// Find the "Community plugins" header in the left nav
-		const titles = modal.querySelectorAll('.vertical-tab-header-group-title');
+		const titles = Array.from(modal.querySelectorAll('.vertical-tab-header-group-title'));
 		let group = null;
 		for (const t of titles) {
 			const txt = (t.textContent || '').trim().toLowerCase();
@@ -899,7 +988,7 @@ class DisableFromSidebar extends Plugin {
 			const id = idAttr || this._nameToId(name);
 			const lines = await this._getHotkeysWcas(id);
 			const hottitle = 'Click to Copy\n' + lines.join('\n');
-			console.debug(`[disable-sidebar] Found plugin item: name="${name}", id="${id}", hotkeys=${lines.length}`);
+			//console.debug(`[disable-sidebar] Found plugin item: name="${name}", id="${id}", hotkeys=${lines.length}`);
 			if (lines && lines.length) item.title = lines.join('\n');
 
 			// close (×) button (only if not already there)
@@ -933,7 +1022,7 @@ class DisableFromSidebar extends Plugin {
 		}
 	}
 	async _onClickCopy(ev, lines, item, name, id) {
-		console.debug(`[disable-sidebar] Copying hotkeys for plugin: name="${name}", id="${id}", lines=${lines.length}`);
+		//console.debug(`[disable-sidebar] Copying hotkeys for plugin: name="${name}", id="${id}", lines=${lines.length}`);
 		if (!lines || !lines.length) return;
 		if (!navigator.clipboard) {
 			new Notice('Clipboard API not available', 2000);
@@ -1097,10 +1186,10 @@ function insertBeforeLabelText(item, el) {
 }
 // Returns lines like: "enter.cs  Do the Thing"
 async function _getPluginHotkeysWcasLines(pluginId) {
-	console.debug(`[disable-sidebar] Gathering hotkeys for plugin ID: ${pluginId}`, this.app);
+	//console.debug(`[disable-sidebar] Gathering hotkeys for plugin ID: ${pluginId}`, this.app);
 	const cmds = this.app?.commands;
 	if (!cmds) return [];
-	console.debug(`[disable-sidebar] Gathering hotkeys for plugin ID: ${pluginId}`);
+	// console.debug(`[disable-sidebar] Gathering hotkeys for plugin ID: ${pluginId}`);
 	// Gather this plugin's commands
 	const all = (cmds.listCommands?.() || Object.values(cmds.commands || {}))
 		.filter(c => typeof c?.id === 'string' && c.id.startsWith(pluginId + ':'));
@@ -1208,7 +1297,7 @@ function rainbowize(
 		const hue = (hueStart + i * step) % 360;
 		hslArr.push(`hsl(${(hue + 360) % 360}, ${pct(saturation)}, ${pct(lightness)})`);
 	}
-	console.debug(`[disable-sidebar] Rainbowizing elements: count=${els.length}, property="${property}", saturation="${pct(saturation)}", lightness="${pct(lightness)}", hueStart=${hueStart}, hueEnd=${hueEnd}, step=${step}`, hslArr);
+	// console.debug(`[disable-sidebar] Rainbowizing elements: count=${els.length}, property="${property}", saturation="${pct(saturation)}", lightness="${pct(lightness)}", hueStart=${hueStart}, hueEnd=${hueEnd}, step=${step}`, hslArr);
 
 
 	(els.forEach ? els : Array.from(els)).forEach((el) => {
@@ -1229,7 +1318,7 @@ function rainbowize(
 
 		const hue = (hueStart + idx * step) % 360;
 		const hsl = `hsl(${(hue + 360) % 360}, ${pct(saturation)}, ${pct(lightness)})`;
-		console.debug(`[disable-sidebar] Rainbowizing element: idx=${idx}, char="${ch}", hsl="${hsl}"`);
+		// console.debug(`[disable-sidebar] Rainbowizing element: idx=${idx}, char="${ch}", hsl="${hsl}"`);
 		el.style.setProperty(property, hsl);
 
 		// breadcrumbs (optional)

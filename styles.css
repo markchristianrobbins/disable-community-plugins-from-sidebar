@@ -1,0 +1,9 @@
+.modal.mod-settings.mod-sidebar-layout
+    .modal-content.vertical-tabs-container
+    .vertical-tab-header
+    .vertical-tab-header-group
+    .vertical-tab-header-group-items
+    .vertical-tab-nav-item.is-active {
+		background-color: transparent;
+		border: 1px solid var(--interactive-accent);
+}

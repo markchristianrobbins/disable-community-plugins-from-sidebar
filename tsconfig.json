@@ -1,0 +1,25 @@
+{
+	"compilerOptions": {
+		"checkJs": true,
+		"allowJs": true,
+		"strict": true,
+		"noEmit": true,
+		"noImplicitAny": false,
+		"target": "ES2020",
+		"types": [
+			"obsidian",
+			"node"
+		],
+		"module": "commonjs",
+		"lib": [
+			"ES2020",
+			"DOM",
+			"dom.iterable"
+		]
+	},
+	"typeAcquisition": { "enable": true, "include": ["electron"] },
+	"include": [
+		"**/*.js",
+		"**/*.d.ts"
+	]
+}

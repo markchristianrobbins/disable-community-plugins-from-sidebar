@@ -1,0 +1,11 @@
+# Obsidian plugin / Node
+node_modules/
+.vscode/
+.DS_Store
+Thumbs.db
+dist/
+coverage/
+*.log
+*.zip
+
+ai.js
