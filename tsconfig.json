@@ -7,8 +7,6 @@
 		"noImplicitAny": false,
 		"target": "ES2020",
 		"types": [
-			"obsidian",
-			"node"
 		],
 		"module": "commonjs",
 		"lib": [
